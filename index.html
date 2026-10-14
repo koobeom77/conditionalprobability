@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>조건부 확률</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); line-height: 1.6; padding: 20px; }
+        header { text-align: center; margin-bottom: 25px; }
+        header h1 { font-size: 1.8rem; color: var(--primary); margin-bottom: 4px; }
+        
+        .container { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+        .card { background: var(--card-bg); border-radius: 12px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid var(--border); }
+        .card h2 { font-size: 1.25rem; margin-bottom: 12px; color: var(--primary); display: flex; align-items: center; gap: 8px; }
+        
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 10px; }
+        .tab-btn { background: none; border: none; padding: 10px 18px; font-size: 0.95rem; font-weight: 600; color: var(--text-muted); cursor: pointer; border-radius: 6px; transition: all 0.2s; }
+        .tab-btn.active { background: var(--primary); color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: center; }
+        @media(max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+        
+        .control-group { margin-bottom: 10px; }
+        .control-group label { display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 3px; }
+        .control-group input[type="range"] { width: 100%; accent-color: var(--primary); }
+        .value-display { font-weight: bold; color: var(--primary); }
+
+        /* 1번 기능: 벤다이어그램 */
+        .venn-container { position: relative; width: 100%; height: 280px; background: #f1f5f9; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid var(--border); }
+        .venn-circle { position: absolute; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; transition: all 0.15s ease-out; top: 50%; transform: translateY(-50%); }
+        .circle-a { background: rgba(239, 68, 68, 0.25); border: 2px solid #ef4444; color: #b91c1c; font-size: 0.85rem; }
+        .circle-b { background: rgba(79, 70, 229, 0.2); border: 2px solid var(--primary); color: var(--primary); font-size: 0.85rem; }
+
+        /* 2번 기능: 영역 바 */
+        .visual-bar-container { display: flex; flex-direction: column; gap: 12px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border); }
+        .bar-wrapper { display: flex; flex-direction: column; gap: 4px; }
+        .bar-label { font-size: 0.85rem; font-weight: 600; display: flex; justify-content: space-between; }
+        .bar-track { width: 100%; height: 24px; background: #e2e8f0; border-radius: 6px; overflow: hidden; position: relative; }
+        .bar-fill { height: 100%; transition: width 0.3s ease; border-radius: 6px; display: flex; align-items: center; padding-left: 8px; color: white; font-size: 0.75rem; font-weight: bold; }
+
+        .stats-box { background: #f8fafc; border: 1px solid var(--border); padding: 12px; border-radius: 8px; font-size: 0.85rem; }
+        .stats-box h3 { font-size: 0.95rem; margin-bottom: 5px; color: var(--primary); }
+
+        /* 3번 기능: 스팸 분류기 */
+        .mail-simulator { display: flex; flex-direction: column; gap: 12px; }
+        .sample-display-box { background: #f1f5f9; border: 1px solid var(--border); border-radius: 6px; padding: 12px; min-height: 50px; display: flex; align-items: center; font-style: italic; color: #334155; font-size: 0.9rem; }
+        .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+        .btn-sample { background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        .btn-sample:hover { background: #c7d2fe; }
+        
+        textarea { width: 100%; height: 75px; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; resize: none; }
+        .btn { background: var(--primary); color: white; border: none; padding: 10px 18px; font-size: 0.95rem; font-weight: 600; border-radius: 6px; cursor: pointer; transition: background 0.2s; align-self: flex-start; }
+        .btn:hover { background: var(--primary-hover); }
+        
+        .results-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
+        .result-card { background: #ffffff; border: 1px solid var(--border); padding: 10px; border-radius: 6px; text-align: center; }
+        .result-card .num { font-size: 1.1rem; font-weight: bold; color: var(--primary); }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>조건부 확률</h1>
+</header>
+
+<div class="container">
+    <div class="card">
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(0)">1. 표본공간의 축소</button>
+            <button class="tab-btn tab" onclick="switchTab(1)">2. 진단키트 영역 비교</button>
+            <button class="tab-btn tab" onclick="switchTab(2)">3. 스팸 메일 분류기 실습</button>
+        </div>
+
+        <!-- 탭 1: 표본공간의 축소 -->
+        <div class="tab-content active">
+            <h2>전체 집합이 축소되는 조건부 확률의 본질</h2>
+            <p style="margin-bottom: 10px; color: var(--text-muted); font-size: 0.85rem;">
+                A, B, A교집합B의 원소 개수를 조정해보면서 기본 확률과 조건부 확률이 어떻게 변하는지 확인해보세요. (전체 집합 U는 200 고정)
+            </p>
+            <div class="grid-2">
+                <div>
+                    <div class="control-group">
+                        <label>전체 집합 (U) 크기: <span class="value-display">200 (고정)</span></label>
+                    </div>
+                    <div class="control-group">
+                        <label>집합 (A) 원소 개수: <span id="aSizeVal" class="value-display">50</span></label>
+                        <input type="range" id="rangeA" min="20" max="90" value="50" oninput="updateVenn()">
+                    </div>
+                    <div class="control-group">
+                        <label>조건 집합 (B) 원소 개수: <span id="bSizeVal" class="value-display">70</span></label>
+                        <input type="range" id="rangeB" min="30" max="100" value="70" oninput="updateVenn()">
+                    </div>
+                    <div class="control-group">
+                        <label>교집합 (A ∩ B) 원소 개수: <span id="interSizeVal" class="value-display">25</span></label>
+                        <input type="range" id="rangeInter" min="0" max="50" value="25" oninput="updateVenn()">
+                    </div>
+                    <div class="stats-box">
+                        <h3>실시간 계산</h3>
+                        <p>• 기본 확률 P(A) = <span id="probNormal">--</span></p>
+                        <p>• 조건부 확률 P(A | B) = n(A ∩ B) / n(B) = <span id="probConditional" style="font-weight:bold; color:var(--primary);">--</span></p>
+                    </div>
+                </div>
+                <div class="venn-container">
+                    <div class="venn-circle circle-a" id="vennA">A</div>
+                    <div class="venn-circle circle-b" id="vennB">B</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 탭 2: 진단키트 영역 비교 -->
+        <div class="tab-content">
+            <h2>진단 키트 성능과 유병률에 따른 영역 비교</h2>
+            <p style="margin-bottom: 12px; color: var(--text-muted); font-size: 0.85rem;">
+                유병률, 민감도, 특이도 슬라이더를 조작하여 전체 인구 대비 감염자 및 양성 판정자 영역의 변화를 확인하세요.
+            </p>
+            <div class="grid-2">
+                <div>
+                    <div class="control-group">
+                        <label>실제 유병률: <span id="prevVal" class="value-display">5</span>%</label>
+                        <input type="range" id="rangePrev" min="1" max="40" value="5" oninput="updateBars()">
+                    </div>
+                    <div class="control-group">
+                        <label>민감도: <span id="sensVal" class="value-display">95</span>%</label>
+                        <input type="range" id="rangeSens" min="80" max="100" value="95" oninput="updateBars()">
+                    </div>
+                    <div class="control-group">
+                        <label>특이도: <span id="specVal" class="value-display">90</span>%</label>
+                        <input type="range" id="rangeSpec" min="70" max="100" value="90" oninput="updateBars()">
+                    </div>
+                    <div class="stats-box">
+                        <h3>분석 결과 (1만 명 기준)</h3>
+                        <p>• 전체 양성 판정자: <span id="barTotalPosText" style="font-weight:bold;">--</span>명</p>
+                        <p>• 이 중 진짜 환자: <span id="barTruePosText" style="font-weight:bold; color:#10b981;">--</span>명</p>
+                        <p>• <strong>양성일 때 실제 감염 확률: <span id="barFinalProb" style="color:var(--primary); font-size:1.1rem;">--</span></strong></p>
+                    </div>
+                </div>
+                <div class="visual-bar-container">
+                    <div class="bar-wrapper">
+                        <div class="bar-label"><span>1. 전체 인구 (10,000명)</span></div>
+                        <div class="bar-track"><div class="bar-fill" style="width: 100%; background: #64748b;">10,000명</div></div>
+                    </div>
+                    <div class="bar-wrapper">
+                        <div class="bar-label"><span>2. 실제 감염자 집단</span><span id="infText">--</span></div>
+                        <div class="bar-track"><div class="bar-fill" id="infBar" style="width: 0%; background: #ef4444;"></div></div>
+                    </div>
+                    <div class="bar-wrapper">
+                        <div class="bar-label"><span>3. 전체 양성 판정자 집단 (새로운 표본공간 B)</span><span id="posText">--</span></div>
+                        <div class="bar-track"><div class="bar-fill" id="posBar" style="width: 0%; background: #3b82f6;"></div></div>
+                    </div>
+                    <div class="bar-wrapper">
+                        <div class="bar-label"><span>4. 진짜 환자 영역 (A ∩ B)</span><span id="trueText">--</span></div>
+                        <div class="bar-track"><div class="bar-fill" id="trueBar" style="width: 0%; background: #10b981;"></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 탭 3: 스팸 메일 분류기 실습 -->
+        <div class="tab-content">
+            <h2>스팸 메일 분류기 설계 실습</h2>
+            <p style="margin-bottom: 12px; color: var(--text-muted); font-size: 0.85rem;">
+                버튼을 눌러 샘플 메일을 확인하고, 스팸 판정에 사용할 키워드를 직접 입력하여 분류 성능을 테스트해 보세요.
+            </p>
+            <div class="mail-simulator">
+                <div>
+                    <label style="font-weight: 600; font-size: 0.85rem; margin-bottom: 4px; display:block;">샘플 메일 확인하기</label>
+                    <div class="btn-row">
+                        <button class="btn-sample" onclick="getRandomMail('spam')">[스팸] 메일 예시 확인하기</button>
+                        <button class="btn-sample" onclick="getRandomMail('normal')">[일반] 메일 예시 확인하기</button>
+                    </div>
+                    <div class="sample-display-box" id="sampleMailDisplay">버튼을 눌러 샘플 메일 내용을 확인해보세요.</div>
+                </div>
+                
+                <div class="grid-2" style="align-items: start;">
+                    <div>
+                        <div class="control-group">
+                            <label>분류 규칙 설정 (스팸 판정할 키워드, 콤마로 구분)</label>
+                            <textarea id="spamKeywords" placeholder="예: 당첨, 무료, 대박, 지원금, 급등, 긴급, 할인, 이벤트, 대출, 수익">당첨, 무료, 대박, 지원금, 급등, 긴급, 할인, 이벤트, 대출, 수익</textarea>
+                        </div>
+                        <button class="btn" onclick="runSpamClassifier()">스팸 분류기 실행하기 (100통 테스트)</button>
+                    </div>
+                    <div class="stats-box" style="margin-top:0;">
+                        <h3>테스트 결과 (총 100통 중)</h3>
+                        <div class="results-grid">
+                            <div class="result-card">
+                                <div>실제 스팸</div>
+                                <div class="num" id="resActualSpam">45통</div>
+                            </div>
+                            <div class="result-card">
+                                <div>정확히 차단</div>
+                                <div class="num" id="resCorrect" style="color:#10b981;">--</div>
+                            </div>
+                            <div class="result-card">
+                                <div>오탐지 (일반 차단)</div>
+                                <div class="num" id="resFalseAlarm" style="color:#ef4444;">--</div>
+                            </div>
+                        </div>
+                        <p style="margin-top: 10px; font-size: 0.85rem;">• 분류 정확도: <span id="resAccuracy" style="font-weight:bold; color:var(--primary);">--</span>%</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function switchTab(index) {
+        const buttons = document.querySelectorAll('.tab-btn');
+        const contents = document.querySelectorAll('.tab-content');
+        buttons.forEach((btn, i) => {
+            btn.classList.toggle('active', i === index);
+            contents[i].classList.toggle('active', i === index);
+        });
+        if(index === 0) updateVenn();
+        if(index === 1) updateBars();
+        if(index === 2) runSpamClassifier();
+    }
+
+    function updateVenn() {
+        const u = 200; // U 집합 크기 200 고정
+        const a = parseInt(document.getElementById('rangeA').value);
+        const b = parseInt(document.getElementById('rangeB').value);
+        const interInput = document.getElementById('rangeInter');
+        
+        const maxInter = Math.min(a, b);
+        interInput.max = maxInter;
+        let inter = parseInt(interInput.value);
+        if (inter > maxInter) {
+            inter = maxInter;
+            interInput.value = inter;
+        }
+
+        document.getElementById('aSizeVal').innerText = a;
+        document.getElementById('bSizeVal').innerText = b;
+        document.getElementById('interSizeVal').innerText = inter;
+
+        const vennA = document.getElementById('vennA');
+        const vennB = document.getElementById('vennB');
+
+        const scale = 16; 
+        const sizeA = Math.sqrt(a) * scale;
+        const sizeB = Math.sqrt(b) * scale;
+
+        vennA.style.width = `${sizeA}px`;
+        vennA.style.height = `${sizeA}px`;
+
+        vennB.style.width = `${sizeB}px`;
+        vennB.style.height = `${sizeB}px`;
+
+        const radiusA = sizeA / 2;
+        const radiusB = sizeB / 2;
+        
+        const maxSepDist = radiusA + radiusB + 30;
+        const minSepDist = Math.abs(radiusA - radiusB);
+        
+        const overlapRatio = maxInter > 0 ? (inter / maxInter) : 0;
+        const currentDist = maxSepDist - (maxSepDist - minSepDist) * overlapRatio;
+
+        vennA.style.left = `calc(50% - ${currentDist / 2 + radiusA}px)`;
+        vennB.style.left = `calc(50% + ${currentDist / 2 - radiusB}px)`;
+
+        const probN = u > 0 ? (a / u).toFixed(3) : 0;
+        const probC = b > 0 ? (inter / b).toFixed(3) : 0;
+
+        document.getElementById('probNormal').innerText = `${probN} (${(a/u*100).toFixed(1)}%)`;
+        document.getElementById('probConditional').innerText = `${probC} (${(b>0 ? inter/b*100 : 0).toFixed(1)}%)`;
+    }
+
+    function updateBars() {
+        const prev = parseInt(document.getElementById('rangePrev').value) / 100;
+        const sens = parseInt(document.getElementById('rangeSens').value) / 100;
+        const spec = parseInt(document.getElementById('rangeSpec').value) / 100;
+
+        document.getElementById('prevVal').innerText = Math.round(prev * 100);
+        document.getElementById('sensVal').innerText = Math.round(sens * 100);
+        document.getElementById('specVal').innerText = Math.round(spec * 100);
+
+        const total = 10000;
+        const infected = Math.round(total * prev);
+        const healthy = total - infected;
+
+        const truePos = Math.round(infected * sens);
+        const falsePos = Math.round(healthy * (1 - spec));
+        const totalPos = truePos + falsePos;
+
+        const finalProb = totalPos > 0 ? ((truePos / totalPos) * 100).toFixed(1) : 0;
+
+        document.getElementById('barTotalPosText').innerText = totalPos.toLocaleString();
+        document.getElementById('barTruePosText').innerText = truePos.toLocaleString();
+        document.getElementById('barFinalProb').innerText = `${finalProb}%`;
+
+        document.getElementById('infBar').style.width = `${(infected / total) * 100}%`;
+        document.getElementById('infText').innerText = `${infected.toLocaleString()}명`;
+
+        document.getElementById('posBar').style.width = `${(totalPos / total) * 100}%`;
+        document.getElementById('posText').innerText = `${totalPos.toLocaleString()}명`;
+
+        document.getElementById('trueBar').style.width = `${(truePos / total) * 100}%`;
+        document.getElementById('trueText').innerText = `${truePos.toLocaleString()}명`;
+    }
+
+    const spamSamples = [
+        "[스팸] 축하합니다! 100% 당첨 기회, 즉시 무료 지원금 신청하세요.",
+        "[스팸] 지금 바로 암호화폐 급등 대박 투자 기회 무료 안내드립니다.",
+        "[스팸] [긴급] 계좌 정지 위험! 본인 인증 링크 즉시 클릭하세요.",
+        "[스팸] 단돈 10만 원으로 매일 500% 수익 보장! 지금 입장하세요.",
+        "[스팸] 성인 인증 완료 시 현금 50만 원 즉시 지급 이벤트!",
+        "[스팸] 무서류 당일 대출 승인! 최저 금리로 즉시 입금해 드립니다.",
+        "[스팸] [광고] 강남 고급 아파트 미분양 파격 할인 마지막 찬스",
+        "[스팸] 축 당첨! 로또 번호 무료 유출 조합 서비스 평생 무료",
+        "[스팸] 가상화폐 상장 직전 마지막 코인 특급 매수 기회 안내",
+        "[스팸] 회원가입만 해도 현금 10만 원 지급! 지금 바로 접속",
+        "[스팸] [무료배송] 오늘만 특가! 명품 가방 90% 할인 행사",
+        "[스팸] VIP 전용 특별 대출 한도 조회 서비스 오픈 (무료)",
+        "[스팸] 주식 카톡방 초대 링크! 이번 주 급등주 무료 공개",
+        "[스팸] [단독] 정부 지원 서민 대출 대상자 조회 즉시 확인",
+        "[스팸] 해외 직구 파격 세일! 에르메스 샤넬 특가 상품 안내",
+        "[스팸] [광고] 코인 리딩방 무료 체험 후 수익 인증 폭발",
+        "[스팸] 신용등급 상관없이 무직자도 현금 소액 대출 가능",
+        "[스팸] [긴급안내] 고객님 앞으로 도착한 택배 미수령 확인",
+        "[스팸] 초대박 부업 알바! 글쓰기만 해도 일당 20만 원 지급",
+        "[스팸] [특급정보] 내일 아침 무조건 상한가 가는 종목 공개"
+    ];
+
+    const normalSamples = [
+        "[일반] 3월 수학과제 탐구 수행평가 과제 안내 공지사항입니다.",
+        "[일반] 다음 주 월요일 학부모 상담 일정 확인 부탁드립니다.",
+        "[일반] 2026학년도 1학기 동아리 부원 모집 안내 및 신청 방법",
+        "[일반] 도서관 도서 반납 기한 연장 안내 건입니다.",
+        "[일반] 이번 주 급식 식단표 및 영양 교육 안내 가정통신문",
+        "[일반] 학교 체육대회 반별 티셔츠 주문 관련 안내 말씀",
+        "[일반] 방과후학교 수강 신청 결과 및 납부 안내 안내장",
+        "[일반] 과학실험실 안전 수칙 교육 자료 및 준비물 안내",
+        "[일반] 중간고사 시험 범위 및 시간표 안내 공지",
+        "[일반] 교내 테니스 대회 참가 희망자 신청 접수 안내",
+        "[일반] 진로 진학 상담의 날 운영 안내 및 신청서",
+        "[일반] 현장체험학습 장소 선정 설문조사 협조 요청",
+        "[일반] 학교 축제 동아리 부스 운영 계획서 제출 기한",
+        "[일반] 보건실 구강 검진 안내 및 문진표 작성 협조",
+        "[일반] 에코 텀블러 사용 캠페인 참여 안내 공지",
+        "[일반] 교과 교실제 이동 노선 숙지 및 교실 배치도 안내",
+        "[일반] 1학년 스터디 플래너 작성법 특강 안내",
+        "[일반] 학교운영위원회 개최 결과 및 회의록 공개 안내",
+        "[일반] 수학 클리닉 멘토링 프로그램 참여 학생 명단 공지",
+        "[일반] 졸업앨범 촬영 일정 및 복장 규정 안내 공지"
+    ];
+
+    function getRandomMail(type) {
+        const list = type === 'spam' ? spamSamples : normalSamples;
+        const randIndex = Math.floor(Math.random() * list.length);
+        document.getElementById('sampleMailDisplay').innerText = list[randIndex];
+    }
+
+    function runSpamClassifier() {
+        const rawKeywords = document.getElementById('spamKeywords').value;
+        const keywords = rawKeywords.split(',').map(k => k.trim()).filter(k => k.length > 0);
+
+        const totalSpam = 45;
+        const totalNormal = 55;
+        let correctCount = 0;
+        let falseAlarmCount = 0;
+
+        for (let i = 0; i < 100; i++) {
+            const isActuallySpam = i < totalSpam;
+            let hasKeyword = false;
+            
+            const sampleText = isActuallySpam ? spamSamples[i % spamSamples.length] : normalSamples[i % normalSamples.length];
+            
+            for (let kw of keywords) {
+                if (sampleText.includes(kw)) {
+                    hasKeyword = true;
+                    break;
+                }
+            }
+
+            const predictedSpam = hasKeyword && keywords.length > 0;
+
+            if (isActuallySpam && predictedSpam) correctCount++;
+            if (!isActuallySpam && predictedSpam) falseAlarmCount++;
+        }
+
+        const accuracy = (((correctCount + (totalNormal - falseAlarmCount)) / 100) * 100).toFixed(1);
+
+        document.getElementById('resActualSpam').innerText = totalSpam + "통";
+        document.getElementById('resCorrect').innerText = correctCount + "통";
+        document.getElementById('resFalseAlarm').innerText = falseAlarmCount + "통";
+        document.getElementById('resAccuracy').innerText = accuracy;
+    }
+
+    window.onload = function() {
+        updateVenn();
+        updateBars();
+        runSpamClassifier();
+    };
+</script>
+
+</body>
+</html>
